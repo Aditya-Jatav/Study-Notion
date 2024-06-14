@@ -1,7 +1,7 @@
-const Tag = require("../models/tag");
+const Category = require("../models/category");
 
-// create tag ki api or handler function
-exports.createTag = async (req,res)=>{
+// create Category ki api or handler function
+exports.createCategory = async (req,res)=>{
     try{
         // fetch data
         const {name, description} = req.body;
@@ -13,16 +13,16 @@ exports.createTag = async (req,res)=>{
             });
         }
         // create entry in DB
-        const tagDetails = await Tag.create({
+        const categoryDetails = await Category.create({
             name: name,
             description: description,
         });
-        console.log(tagDetails);
+        console.log(categoryDetails);
 
         // return response
         return res.status(200).json({
             success: true,
-            message: 'Tag Created Succesfully',
+            message: 'Category Created Succesfully',
         });
 
     }
@@ -35,15 +35,15 @@ exports.createTag = async (req,res)=>{
 
 };
 
-// getAllTags handler function
-exports.showAlltags = async(res,req)=>{
+// getAllCategory handler function
+exports.showAllcategory = async(res,req)=>{
     try{
-        const allTags = await Tag.find({},{name: true, description: true} );
+        const allCategory = await Category.find({},{name: true, description: true} );
         // here no condition so fetch all data which contain name and description
         res.status(200).json({
             success: true,
             message: 'All tags return successfully',
-            allTags,
+            allCategory,
         })
     }
     catch(error){

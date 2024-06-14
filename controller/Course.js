@@ -1,5 +1,5 @@
 const Course = require("../models/Course");
-const Tag = require("../models/tag");
+const Tag = require("../models/category");
 const User = require("../models/User");
 
 // createCourse handler function
