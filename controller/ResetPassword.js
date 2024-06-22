@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const mailSender = require("../utils/mailSender");
-
+const crypto = require("crypto");
 // resetPasswordToken
 exports.resetPasswordToken = async (req,res) =>{
   try{
@@ -42,7 +42,7 @@ exports.resetPasswordToken = async (req,res) =>{
         console.log(error);
         return res.status(500).json({
             success: false ,
-            message: 'Something went wrong while reset password mail',
+            message: error.message,
         })
   }
    

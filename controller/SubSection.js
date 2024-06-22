@@ -51,5 +51,26 @@ exports.createSubSection = async (req, res) =>{
 };
 
 // HW: Update subsection
+exports.UpdateSubSection = async (req, res)=>{
+    try{
 
+    }
+    catch(error){
+        return res.status(500).json({
+            success: false,
+            message: "Updation of Sub-Section cannot complete,try again later",
+        });
+    }
+}
 // HW: Delete subsection
+exports.deleteSubSection = async (req, res)=>{
+    try{
+        // const Section = await Section.()
+    }
+    catch(error){
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        })
+    }
+}

@@ -1,6 +1,11 @@
 const User = require("../models/User");
 const OTP = require("../models/OTP");
 const otpGenerator = require("otp-generator");
+const mailSender = require("../utils/mailSender");
+const jwt = require("jsonwebtoken")
+const bcrypt = require("bcrypt");
+const { passwordUpdated } = require("../mail/template/passwordUpdate")
+const Profile = require("../models/Profile");
 require("dotenv").config();
 // send OTP
 exports.sendOTP = async(req,res)=>{
@@ -8,8 +13,10 @@ exports.sendOTP = async(req,res)=>{
      // fetch email from request ki body
      const {email} = req.body;
 
+    const checkUserPresent = await User.findOne({ email });
+
      // check if user is already exist
-     if(chechUserPresent){
+     if(checkUserPresent){
          return res.status(401).json({
              succuss:false,
              message:'User already registered',
@@ -98,17 +105,17 @@ exports.signUp =async (req, res) =>{
         }
 
         // find most recent OTP stored for user
-        const recentOtp = await findOne({email}).sort({createdAt: -1}).limit(1);
-        console.log(recentOtp);
+        const response = await OTP.find({email}).sort({createdAt: -1}).limit(1);
+        console.log(response);
         // validate OTP
-        if(recentOtp.length == 0){
+        if(response.length == 0){
             // OTP not found
             return res.status(400).json({
                 success:false,
-                message:'OTP Not Found'
+                message:'OTP Not valid'
             })
         }
-        else if(otp !== recentOtp){
+        else if(otp !== response[0].otp){
             // Invalid OTP
             return res.status(400).json({
                 success: false,
@@ -168,41 +175,39 @@ exports.login = async (req,res)=>{
                 success: false,
                 message:'All fields are required. please try again',
             });
+        }
+        // user check exist or not
+        const user = await User.findOne({email}).populate("additionalDetails")
+        if(!user){
+            return res.status(401).json({
+                success: false,
+                message:'User is not registered, please signup first',
+            });    
+        }
 
-            // user check exist or not
-            const user = await User.findOne({email}).populate("additionalDetails");
-            if(!user){
-                return res.status(401).json({
-                    success: false,
-                    message:'User is not registered, please signup first',
-                });    
-            }
-
-            // generate JWT, after password matching
-            if(await bcrypt.compare(password,user.password)){
-                const payload = {
-                    email: user.email,
-                    id: user._id,
-                    accountType : user.accountType,
+        // generate JWT, after password matching
+        if(await bcrypt.compare(password, user.password)){
+            const token = jwt.sign(
+                { email: user.email, id: user._id, role: user.role },
+                process.env.JWT_SECRET,
+                {
+                  expiresIn: "24h",
                 }
-                const token = jwt.sign(payload, process.env.JWT_SECRET, {
-                    expiresIn: "2h",
-                });
-                user.token = token;
-                user.password = undefined;
+              )
+            user.token = token;
+            user.password = undefined;
 
-                // create cookie and send password
-                const options = {
-                    expires: new Date(Date.now() + 3*24*60*60*1000),
-                    httpOnly: true,
-                }
-                res.cookie("token", token, options).status(200).json({
-                    success: true,
-                    token,
-                     user,
-                     message: 'Logged in Succesfully',
-                })
+            // create cookie and send password
+            const options = {
+                expires: new Date(Date.now() + 3*24*60*60*1000),
+                httpOnly: true,
             }
+            res.cookie("token", token, options).status(200).json({
+                success: true,
+                token,
+                user,
+                message: 'Logged in Succesfully',
+            })
         }
         else{
             return res.status(401).json({
@@ -219,7 +224,6 @@ exports.login = async (req,res)=>{
         });
     }
 };
-
 
 // Change Password
 exports.changePassword = async (res, req)=>{

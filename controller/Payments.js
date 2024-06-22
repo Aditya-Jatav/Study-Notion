@@ -2,7 +2,7 @@ const {instance} = require("../config/razorpay");
 const Course = require("../models/Course");
 const User = require("../models/User");
 const mailSender = require("../utils/mailSender");
-const {courseEnrollmentEmail} = require("../mail/template/courseEnrollmentEmail");
+// const {courseEnrollmentEmail} = require("../mail/template/courseEnrollmentEmail");
 const {default:mongoose} = require("mongoose");
 
 // capture the payment and initiate the razorpay order
@@ -84,79 +84,81 @@ exports.capturePayment = async (req, res) =>{
             message: "Could not initate order",
         })
     }
+ 
+}
 
-    exports.verifySignature = async (req, res) =>{
-        const webhookSecret = "123456789";
 
-        const signature = req.header("x-razorpay-signature");
-        // razorpay apni secret key hash krke bhejga but hmari key normal string h to dono match krne ke liye hume apni key ko bhi hash krna hoga
-        // hmac -> hashed based message authantication code
-        //  hmac => 1. hashing algo     2.secret key 
-        //  sha -> secure hash algorithm
-        // sha256 is type of hashing algo 
-        const shasum = crpto.createHmac("sha256", webhookSecret);
-        shasum.update(JSON.stringify(req.body));
-        const digest = shasum.digest("hex");
+exports.verifySignature = async (req, res) =>{
+    const webhookSecret = "123456789";
 
-        if(signature === digest){
-            console.log("Payment is Authorised");
+    const signature = req.header("x-razorpay-signature");
+    // razorpay apni secret key hash krke bhejga but hmari key normal string h to dono match krne ke liye hume apni key ko bhi hash krna hoga
+    // hmac -> hashed based message authantication code
+    //  hmac => 1. hashing algo     2.secret key 
+    //  sha -> secure hash algorithm
+    // sha256 is type of hashing algo 
+    const shasum = crpto.createHmac("sha256", webhookSecret);
+    shasum.update(JSON.stringify(req.body));
+    const digest = shasum.digest("hex");
 
-            const {courseId, userId} = req.body.payload.payment.entity.notes;
+    if(signature === digest){
+        console.log("Payment is Authorised");
 
-            try{
-                    // fulfill the action
+        const {courseId, userId} = req.body.payload.payment.entity.notes;
 
-                    // find the course and enroll the student in it
-                    const enrolledCourse = await Course.findByIdAndUpdate(
-                                                    {_id:courseId},
-                                                    {$push:{studentsEnrolled: userId}},
-                                                    {new: true},
-                    );
+        try{
+                // fulfill the action
 
-                    if(!enrolledCourse){
-                        return res.status(500).json({
-                            success: false,
-                            message:"Course not Found",
-                        })
-                    }
-                    console.log(enrolledCourse);
+                // find the course and enroll the student in it
+                const enrolledCourse = await Course.findByIdAndUpdate(
+                                                {_id:courseId},
+                                                {$push:{studentsEnrolled: userId}},
+                                                {new: true},
+                );
 
-                    // find the student and add the course to their list enrolled courses me
-                    const enrolledStudent = await User.findOneAndUpdate(
-                                                        {_id: userId},
-                                                        {$push : {courses: courseId}},
-                                                        {new : true},
-                    );
+                if(!enrolledCourse){
+                    return res.status(500).json({
+                        success: false,
+                        message:"Course not Found",
+                    })
+                }
+                console.log(enrolledCourse);
 
-                    console.log(enrolledStudent);
+                // find the student and add the course to their list enrolled courses me
+                const enrolledStudent = await User.findOneAndUpdate(
+                                                    {_id: userId},
+                                                    {$push : {courses: courseId}},
+                                                    {new : true},
+                );
 
-                    // mail send krdo confirmation vala
-                    const emailResponse = await mailSender(
-                                                enrolledCourse.email,
-                                                "Congratulations from CodeHelp",
-                                                "Congratulation you arem onboarded into new CodeHelp Course",
-                    );
+                console.log(enrolledStudent);
 
-                    console.log(emailResponse);
-                    return res.status(200).json({
-                        success: true,
-                        message:"Signature Verified and course added",
-                    });
-            }
-            catch(error){
-                console.log(error);
-                return res.status(500).json({
-                    success: false,
-                    message: error.message,
-                }) 
-            }
+                // mail send krdo confirmation vala
+                const emailResponse = await mailSender(
+                                            enrolledCourse.email,
+                                            "Congratulations from CodeHelp",
+                                            "Congratulation you arem onboarded into new CodeHelp Course",
+                );
+
+                console.log(emailResponse);
+                return res.status(200).json({
+                    success: true,
+                    message:"Signature Verified and course added",
+                });
         }
-        else{
-            return res.status(400)({
+        catch(error){
+            console.log(error);
+            return res.status(500).json({
                 success: false,
-                message:"Invalid  request",
-            })
+                message: error.message,
+            }) 
         }
     }
+    else{
+        return res.status(400)({
+            success: false,
+            message:"Invalid  request",
+        })
     }
+}
    

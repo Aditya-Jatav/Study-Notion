@@ -9,12 +9,11 @@ const mailSender = async (email, title, body) =>{
               pass: process.env.MAIL_PASS, 
             }
         })
-        let info = transporter.sendMail({
-            from:"StudyNotion",
+        let info = await transporter.sendMail({
+            from:"StudyNotion || Aditya Jatav",
             to : `${email}`,
-        subject: `${title}`,
-
-        html : `${body}`,
+            subject: `${title}`,
+            html : `${body}`,
         })
         console.log(info);
         return info;
